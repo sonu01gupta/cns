@@ -1,0 +1,141 @@
+#include <stdio.h>
+#include <string.h>
+#include <ctype.h>
+
+#define SIZE 5
+
+void generate_key_matrix(const char *key, char matrix[SIZE][SIZE]) {
+    int seen[26] = {0};
+    int x = 0, y = 0;
+
+    for (int i = 0; key[i] != '\0'; i++) {
+        char ch = toupper(key[i]);
+        if (ch == 'J') {
+            ch = 'I';
+        }
+        if (!seen[ch - 'A'] && isalpha(ch)) {
+            matrix[x][y] = ch;
+            seen[ch - 'A'] = 1;
+            y++;
+            if (y == SIZE) {
+                y = 0;
+                x++;
+            }
+        }
+    }
+
+    for (char ch = 'A'; ch <= 'Z'; ch++) {
+        if (ch == 'J') continue;
+        if (!seen[ch - 'A']) {
+            matrix[x][y] = ch;
+            seen[ch - 'A'] = 1;
+            y++;
+            if (y == SIZE) {
+                y = 0;
+                x++;
+            }
+        }
+    }
+}
+
+void print_matrix(char matrix[SIZE][SIZE]) {
+    printf("Key Matrix:\n");
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            printf("%c ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+void preprocess_text(const char *text, char *processed_text) {
+    int len = strlen(text);
+    int j = 0;
+
+    for (int i = 0; i < len; i++) {
+        char ch = toupper(text[i]);
+        if (ch == 'J') {
+            ch = 'I';
+        }
+        if (isalpha(ch)) {
+            processed_text[j++] = ch;
+        }
+    }
+    processed_text[j] = '\0';
+
+    len = j;
+    j = 0;
+    for (int i = 0; i < len; i += 2) {
+        processed_text[j++] = processed_text[i];
+        if (i + 1 < len && processed_text[i] == processed_text[i + 1]) {
+            processed_text[j++] = 'X';
+            i--;
+        } else if (i + 1 < len) {
+            processed_text[j++] = processed_text[i + 1];
+        } else {
+            processed_text[j++] = 'X';
+        }
+    }
+    processed_text[j] = '\0';
+}
+
+void find_position(char ch, char matrix[SIZE][SIZE], int *row, int *col) {
+    for (int i = 0; i < SIZE; i++) {
+        for (int j = 0; j < SIZE; j++) {
+            if (matrix[i][j] == ch) {
+                *row = i;
+                *col = j;
+                return;
+            }
+        }
+    }
+}
+
+void encrypt_pair(char a, char b, char matrix[SIZE][SIZE], char *encrypted_pair) {
+    int row1, col1, row2, col2;
+    find_position(a, matrix, &row1, &col1);
+    find_position(b, matrix, &row2, &col2);
+
+    if (row1 == row2) {
+        encrypted_pair[0] = matrix[row1][(col1 + 1) % SIZE];
+        encrypted_pair[1] = matrix[row2][(col2 + 1) % SIZE];
+    } else if (col1 == col2) {
+        encrypted_pair[0] = matrix[(row1 + 1) % SIZE][col1];
+        encrypted_pair[1] = matrix[(row2 + 1) % SIZE][col2];
+    } else {
+        encrypted_pair[0] = matrix[row1][col2];
+        encrypted_pair[1] = matrix[row2][col1];
+    }
+}
+
+void playfair_encrypt(const char *plaintext, const char *key, char *ciphertext) {
+    char matrix[SIZE][SIZE];
+    generate_key_matrix(key, matrix);
+    print_matrix(matrix);
+
+    char processed_text[256];
+    preprocess_text(plaintext, processed_text);
+
+    int len = strlen(processed_text);
+    int j = 0;
+
+    for (int i = 0; i < len; i += 2) {
+        char a = processed_text[i];
+        char b = processed_text[i + 1];
+        encrypt_pair(a, b, matrix, &ciphertext[j]);
+        j += 2;
+    }
+    ciphertext[j] = '\0';
+}
+
+int main() {
+    const char *key = "PLAYFAIR EXAMPLE";
+    const char *plaintext = "HIDE THE GOLD IN THE TREE STUMP";
+    char ciphertext[256];
+
+    playfair_encrypt(plaintext, key, ciphertext);
+    printf("Ciphertext: %s\n", ciphertext);
+
+    return 0;
+}
